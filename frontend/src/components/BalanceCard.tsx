@@ -1,29 +1,45 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useAccount, useBalance } from "wagmi";
+import { USDTAddresses, USDCAddresses } from "../constants/constant";
 
 const bnbLogo = "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg";
 const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.svg";
 const usdcLogo = "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg";
 
 const BalanceCard: React.FC = () => {
-  const { address: accountAddress } = useAccount();
+  const { address: accountAddress, chain: chain } = useAccount();
+  const [chainName, setChainName] = useState<string | undefined>();
   const { data: balanceData } = useBalance({
     address: accountAddress,
   });
 
+  function getUSDTByNetwork(network: string): string | undefined {
+    const entry = USDTAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  function getUSDCByNetwork(network: string): string | undefined {
+    const entry = USDCAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
   const { data: usdtBalanceData } = useBalance({
     address: accountAddress,
-    token: "0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0", // USDT Token address
+    // @ts-expect-error: Object is possibly 'null'.
+    token: getUSDTByNetwork(chainName), // USDT Token address
   });
   const { data: usdcBalanceData } = useBalance({
     address: accountAddress,
-    token: "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8", // USDC Token address
+    // @ts-expect-error: Object is possibly 'null'.
+    token: getUSDCByNetwork(chainName), // USDC Token address
   });
 
   useEffect(() => {
     console.log("called");
+    setChainName(chain?.name);
     console.log(`Account address: ${accountAddress}`);
-  }, [accountAddress]);
+    console.log(`Chain name: ${chain?.name}`);
+  }, [accountAddress, chain]);
 
   const formatBalance = (balance: string | undefined) => {
     return balance ? parseFloat(balance).toFixed(2) : "0.00";

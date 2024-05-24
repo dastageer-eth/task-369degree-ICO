@@ -1,21 +1,53 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import BalanceCard from "../components/BalanceCard";
 import SuccessMessage from "../components/SuccessMessage";
+import {
+  TokenAddresses,
+  USDTAddresses,
+  USDCAddresses,
+  ERC20Abi,
+} from "../constants/constant";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi"; // Ensure correct import
 
 // Mock function to simulate fetching balance from a blockchain or an API
 
 const Invest: React.FC = () => {
   const [transactionType, setTransactionType] = useState<string>("buy");
+  const [chainName, setChainName] = useState<string | undefined>();
   const [currency, setCurrency] = useState<string>("BNB");
   const [amount, setAmount] = useState<string>("");
   const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const { address: accountAddress, chain: chain } = useAccount();
 
   const bnbLogo = "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg";
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.svg";
   const usdcLogo = "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg";
+
+  function getAddressByNetwork(network: string): string | undefined {
+    const entry = TokenAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  function getUSDTByNetwork(network: string): string | undefined {
+    const entry = USDTAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  function getUSDCByNetwork(network: string): string | undefined {
+    const entry = USDCAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  useEffect(() => {
+    setChainName(chain?.name);
+  }, [accountAddress, chain]);
 
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type);
@@ -27,6 +59,11 @@ const Invest: React.FC = () => {
     console.log(`Currency: ${currency}`);
   };
 
+  const { data: hash, writeContract } = useWriteContract();
+  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash,
+  });
+
   const handleInvestClick = () => {
     if (!amount || parseFloat(amount) <= 0) {
       setErrorMessage("Amount must be greater than zero.");
@@ -36,6 +73,26 @@ const Invest: React.FC = () => {
     console.log(`Transaction Type: ${transactionType}`);
     console.log(`Currency: ${currency}`);
     console.log(`Amount: ${amount}`);
+
+    if (currency == "USDT") {
+      writeContract({
+        abi: ERC20Abi.abi,
+        // @ts-expect-error: Object is possibly 'null'.
+        address: getUSDTByNetwork(chainName),
+        functionName: "approve",
+        // @ts-expect-error: Object is possibly 'null'.
+        args: [getAddressByNetwork(chainName), amount * 10 ** 6],
+      });
+    } else if (currency == "USDC") {
+      writeContract({
+        abi: ERC20Abi.abi,
+        // @ts-expect-error: Object is possibly 'null'.
+        address: getUSDCByNetwork(chainName),
+        functionName: "approve",
+        // @ts-expect-error: Object is possibly 'null'.
+        args: [getAddressByNetwork(chainName), amount * 10 ** 6],
+      });
+    }
 
     const message =
       transactionType === "buy"
@@ -164,6 +221,7 @@ const Invest: React.FC = () => {
               <input
                 type="number"
                 id="amount"
+                min={0}
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -179,7 +237,7 @@ const Invest: React.FC = () => {
               {transactionType === "buy" ? "Invest" : "Sell"}
             </button>
           </div>
-          {showSuccessMessage && (
+          {isConfirmed && showSuccessMessage && (
             <SuccessMessage
               message={successMessage}
               onClose={handleCloseSuccessMessage}
