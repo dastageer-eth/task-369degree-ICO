@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 contract ICO is Ownable, ReentrancyGuard {
     IERC20 public token;
@@ -31,7 +31,7 @@ contract ICO is Ownable, ReentrancyGuard {
         IERC20 _usdt,
         IERC20 _usdc,
         uint256 _duration
-    ) Ownable(msg.sender){
+    ) Ownable(msg.sender) {
         require(_duration > 0, "Duration must be greater than 0");
 
         token = _token;
@@ -50,12 +50,20 @@ contract ICO is Ownable, ReentrancyGuard {
         _;
     }
 
-    function sellTokensWithUSDT(uint256 tokenCount) public nonReentrant icoActive icoNotEnded {
+    function sellTokensWithUSDT(
+        uint256 tokenCount
+    ) public nonReentrant icoActive icoNotEnded {
         uint256 tokenAmount = tokenCount * 10 ** 18; // Convert tokenCount to 18 decimals for token
-        require(token.transferFrom(msg.sender,address(this), tokenAmount), "Token transfer failed");
+        require(
+            token.transferFrom(msg.sender, address(this), tokenAmount),
+            "Token transfer failed"
+        );
 
         uint256 usdtToSell = tokenCount * 10 ** 6; // Convert to 6 decimals for USDT
-        require(usdtToSell <= usdt.balanceOf(address(this)), "Not enough USDT available");
+        require(
+            usdtToSell <= usdt.balanceOf(address(this)),
+            "Not enough USDT available"
+        );
 
         tokensSold -= tokenAmount;
         usdt.transfer(msg.sender, usdtToSell);
@@ -63,12 +71,20 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokensSold(msg.sender, tokenCount, address(usdt));
     }
 
-    function buyTokensWithUSDT(uint256 tokenCount) public nonReentrant icoActive icoNotEnded {
+    function buyTokensWithUSDT(
+        uint256 tokenCount
+    ) public nonReentrant icoActive icoNotEnded {
         uint256 usdtAmount = tokenCount * 10 ** 6; // Convert tokenCount to 6 decimals for USDT
-        require(usdt.transferFrom(msg.sender,address(this), usdtAmount), "USDT transfer failed");
+        require(
+            usdt.transferFrom(msg.sender, address(this), usdtAmount),
+            "USDT transfer failed"
+        );
 
         uint256 tokensToBuy = tokenCount * 10 ** 18; // Adjust tokenCount to 18 decimals for token transfer
-        require(tokensToBuy <= token.balanceOf(address(this)), "Not enough tokens available");
+        require(
+            tokensToBuy <= token.balanceOf(address(this)),
+            "Not enough tokens available"
+        );
 
         tokensSold += tokensToBuy;
         token.transfer(msg.sender, tokensToBuy);
@@ -76,12 +92,20 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokensPurchased(msg.sender, tokenCount, address(usdt));
     }
 
-    function sellTokensWithUSDC(uint256 tokenCount) public nonReentrant icoActive icoNotEnded {
+    function sellTokensWithUSDC(
+        uint256 tokenCount
+    ) public nonReentrant icoActive icoNotEnded {
         uint256 tokenAmount = tokenCount * 10 ** 18; // Convert tokenCount to 18 decimals for token
-        require(token.transferFrom(msg.sender, address(this), tokenAmount), "Token transfer failed");
+        require(
+            token.transferFrom(msg.sender, address(this), tokenAmount),
+            "Token transfer failed"
+        );
 
         uint256 usdcToSell = tokenCount * 10 ** 6; // Convert to 6 decimals for USDC
-        require(usdcToSell <= usdc.balanceOf(address(this)), "Not enough USDC available");
+        require(
+            usdcToSell <= usdc.balanceOf(address(this)),
+            "Not enough USDC available"
+        );
 
         tokensSold -= tokenAmount;
         usdc.transfer(msg.sender, usdcToSell);
@@ -89,12 +113,20 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokensSold(msg.sender, tokenCount, address(usdc));
     }
 
-    function buyTokensWithUSDC(uint256 tokenCount) public nonReentrant icoActive icoNotEnded {
+    function buyTokensWithUSDC(
+        uint256 tokenCount
+    ) public nonReentrant icoActive icoNotEnded {
         uint256 usdcAmount = tokenCount * 10 ** 6; // Convert tokenCount to 6 decimals for USDC
-        require(usdc.transferFrom(msg.sender, address(this), usdcAmount), "USDC transfer failed");
+        require(
+            usdc.transferFrom(msg.sender, address(this), usdcAmount),
+            "USDC transfer failed"
+        );
 
         uint256 tokensToBuy = tokenCount * 10 ** 18; // Adjust tokenCount to 18 decimals for token transfer
-        require(tokensToBuy <= token.balanceOf(address(this)), "Not enough tokens available");
+        require(
+            tokensToBuy <= token.balanceOf(address(this)),
+            "Not enough tokens available"
+        );
 
         tokensSold += tokensToBuy;
         token.transfer(msg.sender, tokensToBuy);
@@ -102,11 +134,20 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokensPurchased(msg.sender, tokenCount, address(usdc));
     }
 
-    function buyTokensWithETH() public payable nonReentrant icoActive icoNotEnded {
+    function buyTokensWithETH()
+        public
+        payable
+        nonReentrant
+        icoActive
+        icoNotEnded
+    {
         uint256 ethInUSD = (msg.value * ethUSDPrice) / 1 ether; // Convert ETH to USD cents
         uint256 tokenCount = ethInUSD / 100; // 1 token per dollar
         uint256 tokensToBuy = tokenCount * 10 ** 18; // Adjust tokenCount to 18 decimals for token transfer
-        require(tokensToBuy <= token.balanceOf(address(this)), "Not enough tokens available");
+        require(
+            tokensToBuy <= token.balanceOf(address(this)),
+            "Not enough tokens available"
+        );
 
         tokensSold += tokensToBuy;
         token.transfer(msg.sender, tokensToBuy);
@@ -114,13 +155,27 @@ contract ICO is Ownable, ReentrancyGuard {
         emit TokensPurchased(msg.sender, tokenCount, address(0)); // Zero address for ETH
     }
 
-    function sellTokensForETH(uint256 tokenCount) public nonReentrant icoActive icoNotEnded {
+    function sellTokensForETH(
+        uint256 tokenCount
+    ) public nonReentrant icoActive icoNotEnded {
         uint256 tokensToSell = tokenCount * 10 ** 18; // Adjust tokenCount to 18 decimals for token precision
-        require(token.balanceOf(msg.sender) >= tokensToSell, "Not enough tokens to sell");
-        require(token.transfer(address(this), tokensToSell), "Token transfer failed");
+        require(
+            token.balanceOf(msg.sender) >= tokensToSell,
+            "Not enough tokens to sell"
+        );
+        require(
+            token.transferFrom(msg.sender, address(this), tokensToSell),
+            "Token transfer failed"
+        );
 
-        uint256 ethAmount = (tokensToSell * 1 ether) / (ethUSDPrice * 100); // Calculate ETH amount to be returned
-        require(address(this).balance >= ethAmount, "Not enough ETH in reserve");
+        // Calculate ETH amount to be returned based on the ETH price in USD
+        // ethUSDPrice is assumed to be in the same precision as token count (18 decimals)
+        uint256 ethAmount = (tokensToSell / ethUSDPrice) * 100; // Adjust precision for ethUSDPrice
+
+        require(
+            address(this).balance >= ethAmount,
+            "Not enough ETH in reserve"
+        );
 
         payable(msg.sender).transfer(ethAmount);
         tokensSold -= tokensToSell;
@@ -135,7 +190,12 @@ contract ICO is Ownable, ReentrancyGuard {
         usdc.transfer(owner(), usdc.balanceOf(address(this)));
         payable(owner()).transfer(address(this).balance);
 
-        emit ICOEnded(owner(), usdt.balanceOf(address(this)) + usdc.balanceOf(address(this)) + address(this).balance);
+        emit ICOEnded(
+            owner(),
+            usdt.balanceOf(address(this)) +
+                usdc.balanceOf(address(this)) +
+                address(this).balance
+        );
     }
 
     function emergencyStop() public onlyOwner {

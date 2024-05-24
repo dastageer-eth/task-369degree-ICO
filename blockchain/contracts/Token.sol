@@ -7,13 +7,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
 contract TDegree is ERC20, Ownable, ERC20Permit {
-    constructor(address initialOwner)
+    constructor()
         ERC20("TDegree", "TDegree")
-        Ownable(initialOwner)
+        Ownable(msg.sender)
         ERC20Permit("TDegree")
-    {
-        _mint(msg.sender, 1000000000 * 10 ** decimals());
-    }
+    {}
 
     function mint(address to, uint256 amount) public onlyOwner {
         _mint(to, amount);

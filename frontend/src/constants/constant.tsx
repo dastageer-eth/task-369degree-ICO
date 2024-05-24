@@ -1,5 +1,5 @@
 export const TokenAddresses = [
-  ["Sepolia", "0x5D0f8B425fBe575f90C1795Cf2AdF4F160F63144"] as const,
+  ["Sepolia", "0x7689c870891D9211948581EFeAE8a33Dac517BDe"] as const,
 ] as const;
 
 export const USDTAddresses = [
@@ -11,11 +11,11 @@ export const USDCAddresses = [
 ] as const;
 
 export const ICOAddresses = [
-  ["Sepolia", "0xf8859A8EF54C45824848D74e1486ea954E937A1b"] as const,
+  ["Sepolia", "0x875839E10788887667f22f58518B0223e7595CC7"] as const,
 ] as const;
 
 export const StakeAddress = [
-  ["Sepolia", "0x181913a6055ff3242dc536147bc91b56553bA97f"] as const,
+  ["Sepolia", "0x74b53498735b4bef85C4B44B46b17ACDBaaaDF17"] as const,
 ] as const;
 
 export const ERC20Abi = {
