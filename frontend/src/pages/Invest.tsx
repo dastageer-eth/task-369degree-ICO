@@ -3,18 +3,17 @@ import Navbar from "../components/Navbar";
 import BalanceCard from "../components/BalanceCard";
 import SuccessMessage from "../components/SuccessMessage";
 import {
-  TokenAddresses,
   USDTAddresses,
   USDCAddresses,
   ERC20Abi,
+  ICOAbi,
+  ICOAddresses,
 } from "../constants/constant";
 import {
   useAccount,
   useWriteContract,
   useWaitForTransactionReceipt,
-} from "wagmi"; // Ensure correct import
-
-// Mock function to simulate fetching balance from a blockchain or an API
+} from "wagmi";
 
 const Invest: React.FC = () => {
   const [transactionType, setTransactionType] = useState<string>("buy");
@@ -26,12 +25,14 @@ const Invest: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const { address: accountAddress, chain: chain } = useAccount();
 
+  const [approvalComplete, setApprovalComplete] = useState<boolean>(false);
+
   const bnbLogo = "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg";
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.svg";
   const usdcLogo = "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg";
 
-  function getAddressByNetwork(network: string): string | undefined {
-    const entry = TokenAddresses.find(([key]) => key === network);
+  function getICOAddressByNetwork(network: string): string | undefined {
+    const entry = ICOAddresses.find(([key]) => key === network);
     return entry?.[1];
   }
 
@@ -47,6 +48,7 @@ const Invest: React.FC = () => {
 
   useEffect(() => {
     setChainName(chain?.name);
+    console.log(`Chain name set to: ${chain?.name}`);
   }, [accountAddress, chain]);
 
   const handleTransactionTypeChange = (type: string) => {
@@ -59,10 +61,47 @@ const Invest: React.FC = () => {
     console.log(`Currency: ${currency}`);
   };
 
-  const { data: hash, writeContract } = useWriteContract();
-  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-    hash,
+  const { data: approveDataHash, writeContract: writeApprovalContract } =
+    useWriteContract();
+  const { data: transactionDataHash, writeContract: writeTransactionContract } =
+    useWriteContract();
+
+  const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({
+    hash: approveDataHash,
   });
+  const { isSuccess: transactionSuccess } = useWaitForTransactionReceipt({
+    hash: transactionDataHash,
+  });
+
+  useEffect(() => {
+    if (approveSuccess && currency !== "BNB") {
+      console.log("Approval successful, proceeding to buyTokens call");
+      setApprovalComplete(true);
+      writeTransactionContract({
+        // @ts-expect-error: Object is possibly 'null'.
+        address: getICOAddressByNetwork(chainName!),
+        abi: ICOAbi.abi,
+        functionName:
+          currency === "USDT" ? "buyTokensWithUSDT" : "buyTokensWithUSDC",
+        args: [BigInt(amount)],
+      });
+    }
+  }, [approveSuccess, currency, writeTransactionContract, amount, chainName]);
+
+  useEffect(() => {
+    if (transactionSuccess && (currency === "BNB" || approvalComplete)) {
+      console.log("Transaction successful");
+      const message =
+        transactionType === "buy"
+          ? `You have successfully bought ${amount} token using ${currency}.`
+          : `You have successfully sold ${amount} token in exchange for ${currency}.`;
+
+      setSuccessMessage(message);
+      setShowSuccessMessage(true);
+      setErrorMessage("");
+      setApprovalComplete(false);
+    }
+  }, [transactionSuccess, currency, approvalComplete, amount, transactionType]);
 
   const handleInvestClick = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -74,33 +113,34 @@ const Invest: React.FC = () => {
     console.log(`Currency: ${currency}`);
     console.log(`Amount: ${amount}`);
 
-    if (currency == "USDT") {
-      writeContract({
+    if (currency === "USDT" || currency === "USDC") {
+      console.log("Sending approval transaction");
+      writeApprovalContract({
+        // @ts-expect-error: Object is possibly 'null'.
+        address:
+          currency === "USDT"
+            ? getUSDTByNetwork(chainName!)
+            : getUSDCByNetwork(chainName!),
         abi: ERC20Abi.abi,
-        // @ts-expect-error: Object is possibly 'null'.
-        address: getUSDTByNetwork(chainName),
         functionName: "approve",
-        // @ts-expect-error: Object is possibly 'null'.
-        args: [getAddressByNetwork(chainName), amount * 10 ** 6],
+        args: [
+          // @ts-expect-error: Object is possibly 'null'.
+          getICOAddressByNetwork(chainName!),
+          BigInt(amount) * BigInt(1e6),
+        ],
       });
-    } else if (currency == "USDC") {
-      writeContract({
-        abi: ERC20Abi.abi,
+    } else if (currency === "BNB") {
+      console.log("Sending buyTokens transaction with BNB");
+      writeTransactionContract({
         // @ts-expect-error: Object is possibly 'null'.
-        address: getUSDCByNetwork(chainName),
-        functionName: "approve",
-        // @ts-expect-error: Object is possibly 'null'.
-        args: [getAddressByNetwork(chainName), amount * 10 ** 6],
+        address: getICOAddressByNetwork(chainName!),
+        abi: ICOAbi.abi,
+        functionName: "buyTokensWithETH",
+        args: [],
+        value: BigInt(Number(amount) * 1e18),
       });
     }
 
-    const message =
-      transactionType === "buy"
-        ? `You have successfully bought ${amount} token using ${currency}.`
-        : `You have successfully sold ${amount} token in exchange of${currency}.`;
-
-    setSuccessMessage(message);
-    setShowSuccessMessage(true);
     setErrorMessage("");
   };
 
@@ -237,7 +277,7 @@ const Invest: React.FC = () => {
               {transactionType === "buy" ? "Invest" : "Sell"}
             </button>
           </div>
-          {isConfirmed && showSuccessMessage && (
+          {showSuccessMessage && (
             <SuccessMessage
               message={successMessage}
               onClose={handleCloseSuccessMessage}

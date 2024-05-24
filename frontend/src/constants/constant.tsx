@@ -11,7 +11,7 @@ export const USDCAddresses = [
 ] as const;
 
 export const ICOAddresses = [
-  ["Sepolia", "0x01A676C20A2F52e53a099256130dE43EB3FBdAb6"] as const,
+  ["Sepolia", "0xa580f52e76AaC1b835Bc22bB11ae6ad2624f0F45"] as const,
 ] as const;
 
 export const ERC20Abi = {

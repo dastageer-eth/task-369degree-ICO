@@ -60,13 +60,13 @@ contract ICO is Ownable {
             "Token transfer failed"
         );
 
-        uint256 usdtToSell = tokenCount * 10 ** 6; // Adjust tokenCount to 6 decimals for USDT transfer
+        uint256 usdtToSell = tokenCount * 10 ** 6; // Convert to 6 decimals for USDT
         require(
             usdtToSell <= usdt.balanceOf(address(this)),
             "Not enough tokens available"
         );
 
-        tokensSold -= usdtToSell;
+        tokensSold -= tokenAmount;
         usdt.transfer(msg.sender, usdtToSell);
 
         emit TokensSold(msg.sender, tokenCount, address(usdt));
@@ -102,14 +102,14 @@ contract ICO is Ownable {
             "Token transfer failed"
         );
 
-        uint256 usdcToSell = tokenCount * 10 ** 6; // Adjust tokenCount to 6 decimals for USDC transfer
+        uint256 usdcToSell = tokenCount * 10 ** 6; // Convert to 6 decimals for USDC
         require(
-            usdcToSell <= usdt.balanceOf(address(this)),
+            usdcToSell <= usdc.balanceOf(address(this)),
             "Not enough tokens available"
         );
 
-        tokensSold -= usdcToSell;
-        usdt.transfer(msg.sender, usdcToSell);
+        tokensSold -= tokenAmount;
+        usdc.transfer(msg.sender, usdcToSell);
 
         emit TokensSold(msg.sender, tokenCount, address(usdc));
     }
