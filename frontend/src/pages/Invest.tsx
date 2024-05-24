@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "../components/Navbar";
 import BalanceCard from "../components/BalanceCard";
 import SuccessMessage from "../components/SuccessMessage";
@@ -17,45 +17,25 @@ import {
 } from "wagmi";
 
 const Invest: React.FC = () => {
-  const [transactionType, setTransactionType] = useState<string>("buy");
+  const [transactionType, setTransactionType] = useState("buy");
   const [chainName, setChainName] = useState<string | undefined>();
-  const [currency, setCurrency] = useState<string>("BNB");
-  const [amount, setAmount] = useState<string>("");
-  const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
-  const [successMessage, setSuccessMessage] = useState<string>("");
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  const { address: accountAddress, chain: chain } = useAccount();
+  const [currency, setCurrency] = useState("BNB");
+  const [amount, setAmount] = useState("");
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+  const { chain } = useAccount();
 
-  const [approvalComplete, setApprovalComplete] = useState<boolean>(false);
+  const [approvalComplete, setApprovalComplete] = useState(false);
 
   const bnbLogo = "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg";
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.svg";
   const usdcLogo = "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg";
 
-  function getICOAddressByNetwork(network: string): string | undefined {
-    const entry = ICOAddresses.find(([key]) => key === network);
-    return entry?.[1];
-  }
-
-  function getTokenAddressByNetwork(network: string): string | undefined {
-    const entry = TokenAddresses.find(([key]) => key === network);
-    return entry?.[1];
-  }
-
-  function getUSDTByNetwork(network: string): string | undefined {
-    const entry = USDTAddresses.find(([key]) => key === network);
-    return entry?.[1];
-  }
-
-  function getUSDCByNetwork(network: string): string | undefined {
-    const entry = USDCAddresses.find(([key]) => key === network);
-    return entry?.[1];
-  }
-
   useEffect(() => {
     setChainName(chain?.name);
     console.log(`Chain name set to: ${chain?.name}`);
-  }, [accountAddress, chain]);
+  }, [chain]);
 
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type);
@@ -66,6 +46,38 @@ const Invest: React.FC = () => {
     setCurrency(currency);
     console.log(`Currency: ${currency}`);
   };
+
+  const getICOAddressByNetwork = useCallback(
+    (network: string): string | undefined => {
+      const entry = ICOAddresses.find(([key]) => key === network);
+      return entry?.[1];
+    },
+    []
+  );
+
+  const getTokenAddressByNetwork = useCallback(
+    (network: string): string | undefined => {
+      const entry = TokenAddresses.find(([key]) => key === network);
+      return entry?.[1];
+    },
+    []
+  );
+
+  const getUSDTByNetwork = useCallback(
+    (network: string): string | undefined => {
+      const entry = USDTAddresses.find(([key]) => key === network);
+      return entry?.[1];
+    },
+    []
+  );
+
+  const getUSDCByNetwork = useCallback(
+    (network: string): string | undefined => {
+      const entry = USDCAddresses.find(([key]) => key === network);
+      return entry?.[1];
+    },
+    []
+  );
 
   const { data: approveDataHash, writeContract: writeApprovalContract } =
     useWriteContract();
@@ -80,36 +92,24 @@ const Invest: React.FC = () => {
   });
 
   useEffect(() => {
-    if (approveSuccess && (currency !== "BNB" || transactionType === "sell")) {
+    if (approveSuccess && currency !== "BNB") {
       console.log("Approval successful, proceeding to transaction call");
       setApprovalComplete(true);
-      if (transactionType === "buy") {
-        writeTransactionContract({
-          // @ts-expect-error: Object is possibly 'null'.
-          address: getICOAddressByNetwork(chainName!),
-          abi: ICOAbi.abi,
-          functionName:
-            currency === "USDT" ? "buyTokensWithUSDT" : "buyTokensWithUSDC",
-          args: [BigInt(amount)],
-        });
-      } else if (transactionType === "sell") {
-        writeTransactionContract({
-          // @ts-expect-error: Object is possibly 'null'.
-          address: getICOAddressByNetwork(chainName!),
-          abi: ICOAbi.abi,
-          functionName:
-            currency === "USDT" ? "sellTokensWithUSDT" : "sellTokensWithUSDC",
-          args: [BigInt(amount)],
-        });
-      }
+      writeTransaction({
+        chainName,
+        currency,
+        transactionType,
+        amount,
+        writeTransactionContract,
+      });
     }
   }, [
     approveSuccess,
     currency,
-    writeTransactionContract,
-    amount,
     chainName,
     transactionType,
+    amount,
+    writeTransactionContract,
   ]);
 
   useEffect(() => {
@@ -132,48 +132,95 @@ const Invest: React.FC = () => {
       setErrorMessage("Amount must be greater than zero.");
       return;
     }
-
     console.log(`Transaction Type: ${transactionType}`);
     console.log(`Currency: ${currency}`);
     console.log(`Amount: ${amount}`);
 
-    if (transactionType === "buy" || transactionType === "sell") {
-      const approvalAddress =
-        transactionType === "sell"
-          ? getTokenAddressByNetwork(chainName!)
-          : currency === "USDT"
-          ? getUSDTByNetwork(chainName!)
-          : getUSDCByNetwork(chainName!);
+    if (transactionType === "buy") {
+      if (currency === "BNB") {
+        writeTransaction({
+          chainName,
+          currency,
+          transactionType,
+          amount,
+          writeTransactionContract,
+        });
+      } else {
+        const approvalAddress =
+          currency === "USDT"
+            ? getUSDTByNetwork(chainName!)
+            : getUSDCByNetwork(chainName!);
+        const approvalAmount = BigInt(Number(amount) * 1e6);
 
-      const approvalAmount =
-        transactionType === "sell"
-          ? BigInt(Number(amount) * 1e18)
-          : BigInt(Number(amount) * 1e6);
+        console.log("Sending approval transaction");
+        writeApprovalContract({
+          // @ts-expect-error: Object is possibly 'null'.
+          address: approvalAddress!,
+          abi: ERC20Abi.abi,
+          functionName: "approve",
+          // @ts-expect-error: Object is possibly 'null'.
+          args: [getICOAddressByNetwork(chainName!)!, approvalAmount],
+        });
+      }
+    } else if (transactionType === "sell") {
+      const approvalAddress = getTokenAddressByNetwork(chainName!);
+      const approvalAmount = BigInt(Number(amount) * 1e18);
 
       console.log("Sending approval transaction");
       writeApprovalContract({
         // @ts-expect-error: Object is possibly 'null'.
-        address: approvalAddress,
+        address: approvalAddress!,
         abi: ERC20Abi.abi,
         functionName: "approve",
         // @ts-expect-error: Object is possibly 'null'.
-        args: [getICOAddressByNetwork(chainName!), approvalAmount],
+        args: [getICOAddressByNetwork(chainName!)!, approvalAmount],
       });
-
-      if (currency === "BNB" && transactionType === "buy") {
-        console.log("Sending buyTokens transaction with BNB");
-        writeTransactionContract({
-          // @ts-expect-error: Object is possibly 'null'.
-          address: getICOAddressByNetwork(chainName!),
-          abi: ICOAbi.abi,
-          functionName: "buyTokensWithETH",
-          args: [],
-          value: BigInt(Number(amount) * 1e18),
-        });
-      }
     }
 
     setErrorMessage("");
+  };
+
+  const writeTransaction = ({
+    chainName,
+    currency,
+    transactionType,
+    amount,
+    writeTransactionContract,
+  }: {
+    chainName: string | undefined;
+    currency: string;
+    transactionType: string;
+    amount: string;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    writeTransactionContract: any;
+  }) => {
+    if (transactionType === "buy") {
+      writeTransactionContract({
+        address: getICOAddressByNetwork(chainName!)!,
+        abi: ICOAbi.abi,
+        functionName:
+          currency === "USDT"
+            ? "buyTokensWithUSDT"
+            : currency === "USDC"
+            ? "buyTokensWithUSDC"
+            : "buyTokensWithETH",
+        args: currency === "BNB" ? [] : [BigInt(amount)],
+        value: currency === "BNB" ? BigInt(Number(amount) * 1e18) : undefined,
+      });
+    } else if (transactionType === "sell") {
+      writeTransactionContract({
+        address: getICOAddressByNetwork(chainName!)!,
+        abi: ICOAbi.abi,
+        functionName:
+          currency === "BNB"
+            ? "sellTokensForETH"
+            : currency === "USDT"
+            ? "sellTokensWithUSDT"
+            : "sellTokensWithUSDC",
+        args: [BigInt(amount)],
+      });
+    }
   };
 
   const handleCloseSuccessMessage = () => {
