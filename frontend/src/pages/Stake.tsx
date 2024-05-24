@@ -1,13 +1,87 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import SuccessMessage from "../components/SuccessMessage";
+import {
+  TokenAddresses,
+  ERC20Abi,
+  StakeAddress,
+  StakeAbi,
+} from "../constants/constant";
+import {
+  useAccount,
+  useBalance,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 
 const Staking: React.FC = () => {
   const [amountToStake, setAmountToStake] = useState<string>("");
+  const [chainName, setChainName] = useState<string | undefined>();
   const [showSuccessMessage, setShowSuccessMessage] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const userBalance = 1000; // Example user balance, you can replace this with actual data
+  const { address: accountAddress, chain: chain } = useAccount();
+
+  function getTokenAddressByNetwork(network: string): string | undefined {
+    const entry = TokenAddresses.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  function getStakingByNetwork(network: string): string | undefined {
+    const entry = StakeAddress.find(([key]) => key === network);
+    return entry?.[1];
+  }
+
+  useEffect(() => {
+    setChainName(chain?.name);
+    console.log(`Chain name set to: ${chain?.name}`);
+  }, [accountAddress, chain]);
+
+  const { data: tokenBalance } = useBalance({
+    address: accountAddress,
+    // @ts-expect-error: Object is possibly 'null'.
+    token: getTokenAddressByNetwork(chainName), // Token address
+  });
+
+  const formatBalance = (balance: string | undefined) => {
+    return balance ? parseFloat(balance).toFixed(2) : "0.00";
+  };
+
+  const { data: approveDataHash, writeContract: writeApprovalContract } =
+    useWriteContract();
+  const { data: transactionDataHash, writeContract: writeTransactionContract } =
+    useWriteContract();
+
+  const { isSuccess: approveSuccess } = useWaitForTransactionReceipt({
+    hash: approveDataHash,
+  });
+  const { isSuccess: transactionSuccess } = useWaitForTransactionReceipt({
+    hash: transactionDataHash,
+  });
+
+  useEffect(() => {
+    if (approveSuccess) {
+      console.log("Approval successful, proceeding to stake call");
+      writeTransactionContract({
+        // @ts-expect-error: Object is possibly 'null'.
+        address: getStakingByNetwork(chainName!),
+        abi: StakeAbi.abi,
+        functionName: "stake",
+        args: [BigInt(amountToStake)],
+      });
+    }
+  }, [approveSuccess, writeTransactionContract, amountToStake, chainName]);
+
+  useEffect(() => {
+    if (transactionSuccess) {
+      console.log("Staking transaction successful");
+      const message = `Successfully staked ${amountToStake} tokens.`;
+
+      setSuccessMessage(message);
+      setShowSuccessMessage(true);
+      setErrorMessage("");
+    }
+  }, [transactionSuccess, amountToStake]);
 
   const handleStakeClick = () => {
     if (!amountToStake || parseFloat(amountToStake) <= 0) {
@@ -15,13 +89,19 @@ const Staking: React.FC = () => {
       return;
     }
 
+    writeApprovalContract({
+      // @ts-expect-error: Object is possibly 'null'.
+      address: getTokenAddressByNetwork(chainName),
+      abi: ERC20Abi.abi,
+      functionName: "approve",
+      args: [
+        // @ts-expect-error: Object is possibly 'null'.
+        getStakingByNetwork(chainName!),
+        BigInt(amountToStake) * BigInt(1e18),
+      ],
+    });
+
     console.log(`Amount to Stake: ${amountToStake}`);
-
-    const message = `You have successfully staked ${amountToStake} tokens.`;
-
-    setSuccessMessage(message);
-    setShowSuccessMessage(true);
-    setErrorMessage("");
   };
 
   const handleCloseSuccessMessage = () => {
@@ -47,7 +127,7 @@ const Staking: React.FC = () => {
               Current Balance
             </label>
             <p className="text-lg font-bold text-gray-800">
-              {userBalance} Tokens
+              {formatBalance(tokenBalance?.formatted)} Tokens
             </p>
           </div>
           <div className="mb-6">

@@ -74,7 +74,7 @@ const Invest: React.FC = () => {
   });
 
   useEffect(() => {
-    if (approveSuccess && currency !== "BNB") {
+    if (approveSuccess && currency !== "BNB" && transactionType === "buy") {
       console.log("Approval successful, proceeding to buyTokens call");
       setApprovalComplete(true);
       writeTransactionContract({
@@ -86,7 +86,14 @@ const Invest: React.FC = () => {
         args: [BigInt(amount)],
       });
     }
-  }, [approveSuccess, currency, writeTransactionContract, amount, chainName]);
+  }, [
+    approveSuccess,
+    currency,
+    writeTransactionContract,
+    amount,
+    chainName,
+    transactionType,
+  ]);
 
   useEffect(() => {
     if (transactionSuccess && (currency === "BNB" || approvalComplete)) {
@@ -113,32 +120,55 @@ const Invest: React.FC = () => {
     console.log(`Currency: ${currency}`);
     console.log(`Amount: ${amount}`);
 
-    if (currency === "USDT" || currency === "USDC") {
-      console.log("Sending approval transaction");
-      writeApprovalContract({
-        // @ts-expect-error: Object is possibly 'null'.
-        address:
-          currency === "USDT"
-            ? getUSDTByNetwork(chainName!)
-            : getUSDCByNetwork(chainName!),
-        abi: ERC20Abi.abi,
-        functionName: "approve",
-        args: [
+    if (transactionType === "buy") {
+      if (currency === "USDT" || currency === "USDC") {
+        console.log("Sending approval transaction");
+        writeApprovalContract({
           // @ts-expect-error: Object is possibly 'null'.
-          getICOAddressByNetwork(chainName!),
-          BigInt(amount) * BigInt(1e6),
-        ],
-      });
-    } else if (currency === "BNB") {
-      console.log("Sending buyTokens transaction with BNB");
-      writeTransactionContract({
-        // @ts-expect-error: Object is possibly 'null'.
-        address: getICOAddressByNetwork(chainName!),
-        abi: ICOAbi.abi,
-        functionName: "buyTokensWithETH",
-        args: [],
-        value: BigInt(Number(amount) * 1e18),
-      });
+          address:
+            currency === "USDT"
+              ? getUSDTByNetwork(chainName!)
+              : getUSDCByNetwork(chainName!),
+          abi: ERC20Abi.abi,
+          functionName: "approve",
+          args: [
+            // @ts-expect-error: Object is possibly 'null'.
+            getICOAddressByNetwork(chainName!),
+            BigInt(amount) * BigInt(1e6),
+          ],
+        });
+      } else if (currency === "BNB") {
+        console.log("Sending buyTokens transaction with BNB");
+        writeTransactionContract({
+          // @ts-expect-error: Object is possibly 'null'.
+          address: getICOAddressByNetwork(chainName!),
+          abi: ICOAbi.abi,
+          functionName: "buyTokensWithETH",
+          args: [],
+          value: BigInt(Number(amount) * 1e18),
+        });
+      }
+    } else if (transactionType === "sell") {
+      if (currency === "BNB") {
+        console.log("Sending sellTokens transaction with BNB");
+        writeTransactionContract({
+          // @ts-expect-error: Object is possibly 'null'.
+          address: getICOAddressByNetwork(chainName!),
+          abi: ICOAbi.abi,
+          functionName: "sellTokensForETH",
+          args: [BigInt(amount)],
+        });
+      } else if (currency === "USDT" || currency === "USDC") {
+        console.log("Sending sellTokens transaction with USDT or USDC");
+        writeTransactionContract({
+          // @ts-expect-error: Object is possibly 'null'.
+          address: getICOAddressByNetwork(chainName!),
+          abi: ICOAbi.abi,
+          functionName:
+            currency === "USDT" ? "sellTokensWithUSDT" : "sellTokensWithUSDC",
+          args: [BigInt(amount)],
+        });
+      }
     }
 
     setErrorMessage("");

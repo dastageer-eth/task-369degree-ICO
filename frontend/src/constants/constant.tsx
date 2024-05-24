@@ -11,7 +11,11 @@ export const USDCAddresses = [
 ] as const;
 
 export const ICOAddresses = [
-  ["Sepolia", "0xa580f52e76AaC1b835Bc22bB11ae6ad2624f0F45"] as const,
+  ["Sepolia", "0xf8859A8EF54C45824848D74e1486ea954E937A1b"] as const,
+] as const;
+
+export const StakeAddress = [
+  ["Sepolia", "0x181913a6055ff3242dc536147bc91b56553bA97f"] as const,
 ] as const;
 
 export const ERC20Abi = {
@@ -996,6 +1000,151 @@ export const ICOAbi = {
           internalType: "contract IERC20",
           name: "",
           type: "address",
+        },
+      ],
+      stateMutability: "view",
+      type: "function",
+    },
+  ],
+} as const;
+
+export const StakeAbi = {
+  abi: [
+    {
+      inputs: [
+        {
+          internalType: "uint256",
+          name: "count",
+          type: "uint256",
+        },
+      ],
+      name: "addReferral",
+      outputs: [],
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+    {
+      inputs: [],
+      name: "claimReward",
+      outputs: [],
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+    {
+      inputs: [
+        {
+          internalType: "uint256",
+          name: "tokenCount",
+          type: "uint256",
+        },
+      ],
+      name: "stake",
+      outputs: [],
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+    {
+      inputs: [
+        {
+          internalType: "address",
+          name: "_stakingToken",
+          type: "address",
+        },
+      ],
+      stateMutability: "nonpayable",
+      type: "constructor",
+    },
+    {
+      inputs: [
+        {
+          internalType: "uint256",
+          name: "tokenCount",
+          type: "uint256",
+        },
+      ],
+      name: "withdraw",
+      outputs: [],
+      stateMutability: "nonpayable",
+      type: "function",
+    },
+    {
+      inputs: [
+        {
+          internalType: "address",
+          name: "",
+          type: "address",
+        },
+      ],
+      name: "hasClaimedReward",
+      outputs: [
+        {
+          internalType: "bool",
+          name: "",
+          type: "bool",
+        },
+      ],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [],
+      name: "maxReferrals",
+      outputs: [
+        {
+          internalType: "uint256",
+          name: "",
+          type: "uint256",
+        },
+      ],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [
+        {
+          internalType: "address",
+          name: "",
+          type: "address",
+        },
+      ],
+      name: "referralCount",
+      outputs: [
+        {
+          internalType: "uint256",
+          name: "",
+          type: "uint256",
+        },
+      ],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [],
+      name: "stakingToken",
+      outputs: [
+        {
+          internalType: "contract IERC20",
+          name: "",
+          type: "address",
+        },
+      ],
+      stateMutability: "view",
+      type: "function",
+    },
+    {
+      inputs: [
+        {
+          internalType: "address",
+          name: "account",
+          type: "address",
+        },
+      ],
+      name: "totalReferrals",
+      outputs: [
+        {
+          internalType: "uint256",
+          name: "",
+          type: "uint256",
         },
       ],
       stateMutability: "view",
