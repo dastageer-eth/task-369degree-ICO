@@ -22,21 +22,21 @@ const Invest: React.FC = () => {
   const [currency, setCurrency] = useState("BNB");
   const [amount, setAmount] = useState("");
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [transactionCompleted, setTransactionCompleted] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const { chain } = useAccount();
-
-  const [approvalComplete, setApprovalComplete] = useState(false);
 
   const bnbLogo = "https://cryptologos.cc/logos/binance-coin-bnb-logo.svg";
   const usdtLogo = "https://cryptologos.cc/logos/tether-usdt-logo.svg";
   const usdcLogo = "https://cryptologos.cc/logos/usd-coin-usdc-logo.svg";
 
   useEffect(() => {
-    setChainName(chain?.name);
-    console.log(`Chain name set to: ${chain?.name}`);
+    if (chain) {
+      setChainName(chain.name);
+      console.log(`Chain name set to: ${chain.name}`);
+    }
   }, [chain]);
-
   const handleTransactionTypeChange = (type: string) => {
     setTransactionType(type);
     console.log(`Transaction Type: ${type}`);
@@ -92,9 +92,8 @@ const Invest: React.FC = () => {
   });
 
   useEffect(() => {
-    if (approveSuccess && currency !== "BNB") {
+    if (approveSuccess) {
       console.log("Approval successful, proceeding to transaction call");
-      setApprovalComplete(true);
       writeTransaction({
         chainName,
         currency,
@@ -103,6 +102,7 @@ const Invest: React.FC = () => {
         writeTransactionContract,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     approveSuccess,
     currency,
@@ -113,7 +113,7 @@ const Invest: React.FC = () => {
   ]);
 
   useEffect(() => {
-    if (transactionSuccess && (currency === "BNB" || approvalComplete)) {
+    if (transactionSuccess && !transactionCompleted) {
       console.log("Transaction successful");
       const message =
         transactionType === "buy"
@@ -123,9 +123,15 @@ const Invest: React.FC = () => {
       setSuccessMessage(message);
       setShowSuccessMessage(true);
       setErrorMessage("");
-      setApprovalComplete(false);
+      setTransactionCompleted(true);
     }
-  }, [transactionSuccess, currency, approvalComplete, amount, transactionType]);
+  }, [
+    transactionSuccess,
+    currency,
+    amount,
+    transactionType,
+    transactionCompleted,
+  ]);
 
   const handleInvestClick = () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -178,6 +184,7 @@ const Invest: React.FC = () => {
     }
 
     setErrorMessage("");
+    setShowSuccessMessage(false);
   };
 
   const writeTransaction = ({
@@ -225,6 +232,13 @@ const Invest: React.FC = () => {
 
   const handleCloseSuccessMessage = () => {
     setShowSuccessMessage(false);
+    setTransactionCompleted(false);
+    setTransactionType("buy");
+    setCurrency("BNB");
+    setAmount("");
+    setSuccessMessage("");
+    setErrorMessage("");
+    window.location.reload();
   };
 
   return (
